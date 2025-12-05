@@ -26,13 +26,18 @@ export async function POST(req) {
       return NextResponse.json({ error: "HF_TOKEN missing in environment" }, { status: 500 });
     }
 
-    const url = `https://api-inference.huggingface.co/models/${encodeURIComponent(hfModel)}`;
+    // Primary: router.huggingface.co models endpoint (replacement for api-inference)
+    const primaryUrl = `https://router.huggingface.co/models/${encodeURIComponent(hfModel)}`;
 
-    const response = await fetch(url, {
+    let data;
+    let output = "";
+
+    const primary = await fetch(primaryUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Accept: "application/json"
       },
       body: JSON.stringify({
         inputs: prompt,
@@ -40,24 +45,52 @@ export async function POST(req) {
       })
     });
 
-    if (!response.ok) {
-      const txt = await response.text();
-      return NextResponse.json({ error: txt || `HF HTTP ${response.status}` }, { status: 500 });
+    if (primary.ok) {
+      data = await primary.json();
+      if (typeof data === "string") {
+        output = data;
+      } else if (Array.isArray(data)) {
+        const first = data[0] || {};
+        output = first.generated_text || first.summary_text || first.text || JSON.stringify(first);
+      } else if (data && typeof data === "object") {
+        output = data.generated_text || data.text || data.output || JSON.stringify(data);
+      }
+    } else {
+      // Fallback: OpenAI-compatible Chat Completions on router
+      const fallbackUrl = "https://router.huggingface.co/v1/chat/completions";
+      const fb = await fetch(fallbackUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({
+          model: hfModel,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1024,
+          stream: false
+        })
+      });
+
+      if (!fb.ok) {
+        const ptxt = await primary.text().catch(() => "");
+        const ftxt = await fb.text().catch(() => "");
+        return NextResponse.json(
+          { error: ptxt || ftxt || `HF HTTP ${primary.status}/${fb.status}` },
+          { status: 500 }
+        );
+      }
+
+      const j = await fb.json();
+      if (j && Array.isArray(j.choices) && j.choices.length > 0) {
+        const choice = j.choices[0];
+        output = choice.message?.content || choice.text || "";
+      }
     }
 
-    const data = await response.json();
-    // Normalize different HF response shapes
-    let output = "";
-    if (typeof data === "string") {
-      output = data;
-    } else if (Array.isArray(data)) {
-      const first = data[0] || {};
-      output = first.generated_text || first.summary_text || JSON.stringify(first);
-    } else if (data && typeof data === "object") {
-      output = data.generated_text || data.text || data.output || JSON.stringify(data);
-    }
-    output = output || "(No output)";
-
+    output = (output && String(output).trim()) || "(No output)";
     return NextResponse.json({ output });
   } catch (e) {
     return NextResponse.json({ error: e.message || String(e) }, { status: 500 });
