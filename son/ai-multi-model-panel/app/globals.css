@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --header-h: 64px;
+}
+
+html,
+body,
+:root {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg-light text-slate-800 dark:bg-bg-dark dark:text-slate-100;
+}
+
+/* Scrollbars */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(100,116,139,0.35);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Chat bubbles */
+.chat-bubble {
+  @apply rounded-2xl px-4 py-3 shadow-sm border border-slate-200/60 dark:border-slate-800/60;
+}
+.chat-bubble-user {
+  @apply bg-indigo-600 text-white dark:bg-indigo-600;
+}
+.chat-bubble-ai {
+  @apply bg-panel-light dark:bg-panel-dark;
+}
+
+/* Container utilities */
+.container-safe {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
