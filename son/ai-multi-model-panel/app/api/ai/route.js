@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const MODELS = {
   deepseek: "deepseek-ai/DeepSeek-V3",
   qwen72: "Qwen/Qwen3-72B-AI-Reasoner",
