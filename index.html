@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sohbet Arayüzü</title>
+    <style>
+        /* --- TEMEL AYARLAR --- */
+        :root {
+            --bg-color: #0f111a; /* Çok koyu lacivert/siyah */
+            --sidebar-color: #161b2e;
+            --accent-gradient: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%); /* Mor gradyan */
+            --text-color: #e2e8f0;
+            --user-msg-bg: #2d3748;
+            --ai-msg-bg: transparent;
+            --input-bg: #1e293b;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR (YAN MENÜ) --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            display: none; /* Mobilde gizli, masaüstünde açılabilir */
+        }
+
+        @media (min-width: 768px) {
+            .sidebar { display: flex; }
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+
+        .new-chat-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: left;
+        }
+
+        .new-chat-btn:hover {
+            background: #334155;
+        }
+
+        /* --- ANA SOHBET ALANI --- */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            max-width: 100%;
+        }
+
+        /* Üst Başlık */
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Mesajların Aktığı Alan */
+        .messages-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Scrollbar Tasarımı */
+        .messages-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        .messages-area::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 4px;
+        }
+
+        /* Mesaj Balonları */
+        .message {
+            display: flex;
+            gap: 15px;
+            line-height: 1.6;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .ai-avatar {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        .user-avatar {
+            background: #475569;
+            color: #cbd5e1;
+        }
+
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+
+        .message.ai .bubble {
+            background-color: var(--ai-msg-bg);
+            color: #d1d5db;
+        }
+
+        .message.user .bubble {
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        /* --- GİRİŞ ALANI (INPUT) --- */
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+        }
+
+        .input-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px 50px 16px 20px;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"]:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent-gradient);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: 0.2s;
+        }
+
+        .send-btn:hover {
+            opacity: 0.9;
+        }
+
+        .disclaimer {
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">Ryne Clone</div>
+        <button class="new-chat-btn">+ Yeni Sohbet</button>
+        </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Mistik Rehber</h2>
+            <span>Online</span>
+        </div>
+
+        <div class="messages-area" id="messagesArea">
+            
+            <div class="message ai">
+                <div class="avatar ai-avatar">AI</div>
+                <div class="bubble">
+                    Merhaba. Ruhunun derinliklerine inmeye ve sorularını cevaplamaya hazırım. Bugün zihninde neler var?
+                </div>
+            </div>
+
+        </div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Buraya bir şeyler yaz..." autocomplete="off">
+                <button class="send-btn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+            <p class="disclaimer">Yapay zeka her zaman doğruyu söylemeyebilir, cevapları kontrol et.</p>
+        </div>
+    </div>
+
+    <script>
+        const inputField = document.getElementById('userInput');
+        const messagesArea = document.getElementById('messagesArea');
+
+        // Enter tuşuna basınca gönderme
+        inputField.addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const text = inputField.value;
+            if (text.trim() === "") return;
+
+            // 1. Kullanıcı mesajını ekle
+            addMessage(text, 'user');
+            inputField.value = '';
+
+            // 2. Otomatik scroll aşağı
+            scrollToBottom();
+
+            // 3. Yapay zeka "yazıyor..." efekti (Simülasyon)
+            setTimeout(() => {
+                const responses = [
+                    "Bunu hissettiğini anlayabiliyorum...",
+                    "Yıldızlar bu konuda karmaşık bir enerji yayıyor.",
+                    "Söylediklerin çok derin, biraz daha açar mısın?",
+                    "Bu bakış açısı ilginç. Devam etmeni istiyorum."
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addMessage(randomResponse, 'ai');
+                scrollToBottom();
+            }, 1000); // 1 saniye sonra cevap verir
+        }
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.classList.add('avatar', sender === 'user' ? 'user-avatar' : 'ai-avatar');
+            avatarDiv.innerText = sender === 'user' ? 'Siz' : 'AI';
+
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('bubble');
+            bubbleDiv.innerText = text;
+
+            if (sender === 'user') {
+                msgDiv.appendChild(bubbleDiv);
+                msgDiv.appendChild(avatarDiv);
+            } else {
+                msgDiv.appendChild(avatarDiv);
+                msgDiv.appendChild(bubbleDiv);
+            }
+
+            messagesArea.appendChild(msgDiv);
+        }
+
+        function scrollToBottom() {
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
